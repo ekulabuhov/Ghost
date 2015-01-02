@@ -547,8 +547,8 @@ Post = ghostBookshelf.Model.extend({
             published_at_raw = ghostBookshelf.knex.raw('(select "published_at" from "posts" where "slug" = ?)', data.slug);
         }
 
-        prev_post_id = Posts.query().min('id').where('published_at', '>', published_at_raw);
-        next_post_id = Posts.query().max('id').where('published_at', '<', published_at_raw);
+        next_post_id = Posts.query().min('id').where('published_at', '>', published_at_raw);
+        prev_post_id = Posts.query().max('id').where('published_at', '<', published_at_raw);
         get_posts = Posts.query();
 
         if (options.include.indexOf('next') !== -1) { 
@@ -559,10 +559,8 @@ Post = ghostBookshelf.Model.extend({
             get_posts.orWhereIn('id', prev_post_id);
         }
 
-        get_posts.fetch().then(function (results) {
-            return results;
-        });
-
+        return get_posts;
+            
         //return ghostBookshelf.Model.findOne.call(this, data, options);
     },
 
