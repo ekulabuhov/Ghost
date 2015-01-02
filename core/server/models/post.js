@@ -523,6 +523,11 @@ Post = ghostBookshelf.Model.extend({
      * **See:** [ghostBookshelf.Model.findOne](base.js.html#Find%20One)
      */
     findOne: function (data, options) {
+        var published_at_raw,
+            prev_post_id,
+            next_post_id,
+            get_posts;
+
         options = options || {};
 
         data = _.extend({
@@ -536,7 +541,29 @@ Post = ghostBookshelf.Model.extend({
         // Add related objects
         options.withRelated = _.union(options.withRelated, options.include);
 
-        return ghostBookshelf.Model.findOne.call(this, data, options);
+        if (data.id) {
+            published_at_raw = ghostBookshelf.knex.raw('(select "published_at" from "posts" where "id" = ?)', data.id);
+        } else if (data.slug) {
+            published_at_raw = ghostBookshelf.knex.raw('(select "published_at" from "posts" where "slug" = ?)', data.slug);
+        }
+
+        prev_post_id = Posts.query().min('id').where('published_at', '>', published_at_raw);
+        next_post_id = Posts.query().max('id').where('published_at', '<', published_at_raw);
+        get_posts = Posts.query();
+
+        if (options.include.indexOf('next') !== -1) { 
+            get_posts.whereIn('id', next_post_id);
+        }
+
+        if (options.include.indexOf('previous') !== -1) { 
+            get_posts.orWhereIn('id', prev_post_id);
+        }
+
+        get_posts.fetch().then(function (results) {
+            return results;
+        });
+
+        //return ghostBookshelf.Model.findOne.call(this, data, options);
     },
 
     /**
