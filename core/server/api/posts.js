@@ -86,7 +86,7 @@ posts = {
 
         return dataProvider.Post.findOne(data, options).then(function (result) {
             if (result) {
-                return {posts: [result.toJSON()]};
+                return {posts: [result]};
             }
 
             return Promise.reject(new errors.NotFoundError('Post not found.'));
