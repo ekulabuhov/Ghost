@@ -523,10 +523,10 @@ Post = ghostBookshelf.Model.extend({
      * **See:** [ghostBookshelf.Model.findOne](base.js.html#Find%20One)
      */
     findOne: function (data, options) {
-        var published_at_raw,
-            prev_post_id,
-            next_post_id,
-            get_posts;
+        var publishedAtRaw,
+            prevPostId,
+            nextPostId,
+            getPosts;
 
         options = options || {};
 
@@ -542,26 +542,43 @@ Post = ghostBookshelf.Model.extend({
         options.withRelated = _.union(options.withRelated, options.include);
 
         if (data.id) {
-            published_at_raw = ghostBookshelf.knex.raw('(select "published_at" from "posts" where "id" = ?)', data.id);
+            publishedAtRaw = ghostBookshelf.knex.raw('(select "published_at" from "posts" where "id" = ?)', data.id);
         } else if (data.slug) {
-            published_at_raw = ghostBookshelf.knex.raw('(select "published_at" from "posts" where "slug" = ?)', data.slug);
+            publishedAtRaw = ghostBookshelf.knex.raw('(select "published_at" from "posts" where "slug" = ?)', data.slug);
         }
 
-        next_post_id = Posts.query().min('id').where('published_at', '>', published_at_raw);
-        prev_post_id = Posts.query().max('id').where('published_at', '<', published_at_raw);
-        get_posts = Posts.query();
+        nextPostId = Posts.query().min('id').where('published_at', '>', publishedAtRaw);
+        prevPostId = Posts.query().max('id').where('published_at', '<', publishedAtRaw);
+        getPosts = Posts.query();
+        getPosts.where(data);
 
-        if (options.include.indexOf('next') !== -1) { 
-            get_posts.whereIn('id', next_post_id);
+        if (options.include.indexOf('next') !== -1) {
+            getPosts.orWhereIn('id', nextPostId);
         }
 
-        if (options.include.indexOf('previous') !== -1) { 
-            get_posts.orWhereIn('id', prev_post_id);
+        if (options.include.indexOf('previous') !== -1) {
+            getPosts.orWhereIn('id', prevPostId);
         }
 
-        return get_posts;
-            
-        //return ghostBookshelf.Model.findOne.call(this, data, options);
+        return getPosts.then(function (result) {
+            if (result.length === 3) {
+                result[1].previous = result[0];
+                result[1].next = result[2];
+                result.splice(0, 1);
+                result.splice(2, 1);
+            }
+            if (result.length === 2) {
+                if (options.include.indexOf('next') !== -1) {
+                    result[0].next = result[1];
+                    result.splice(1, 1);
+                } else {
+                    result[1].previous = result[0];
+                    result.splice(0, 1);
+                }
+            }
+
+            return result;
+        });
     },
 
     /**
